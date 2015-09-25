@@ -28,7 +28,7 @@ __IO float volume = 0.5;
 __IO uint32_t duration = 34100;	//  duration of note
 
 __IO char melody[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
-//__IO char melody[5] = {'G','C','G','C','G'};
+
 
 
 int main(void)
