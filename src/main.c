@@ -1,7 +1,18 @@
-#include "main.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "stm32f4xx.h"
+#include "stm32f4_discovery.h"
+#include "stm32f4xx_gpio.h"
+#include "stm32f4xx_rcc.h"
+#include "codec.h"
+
+#define DELAY 60
+#define CTRL_REG1 0x20
+#define OUTX 0xA9
+#define OUTY 0xAB
+#define OUTZ 0xAD
 
 #define SAMPLE_RATE 44100
 #define DECAY_FACTOR 0.996
@@ -57,7 +68,7 @@ int main(void)
 
 	//enables GPIO clock for PortD
 	//RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-
+	GPIO_InitTypeDef GPIO_InitStructure;
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -120,8 +131,8 @@ int main(void)
 	uint32_t random = 0;
 	uint8_t b = 0;
 
-	STM_EVAL_LEDOn(LED4);
-	STM_EVAL_LEDOff(LED5);
+	//STM_EVAL_LEDOn(LED4);
+	//STM_EVAL_LEDOff(LED5);
 
 	for (n = 0; n<DACBUFFERSIZE; n++)
 	{
@@ -319,8 +330,8 @@ int main(void)
 			}
 		}
 
-		STM_EVAL_LEDToggle(LED4);
-		STM_EVAL_LEDToggle(LED5);
+		//STM_EVAL_LEDToggle(LED4);
+		//STM_EVAL_LEDToggle(LED5);
 
 		// fill buffer with white noise again
 		for(m=0; m < DACBufferSize; m++)
