@@ -27,6 +27,8 @@ void GPIO_Configuration(void);
 void SPI_Configuration(void);
 void delay_ms(uint32_t milli);
 int32_t writeAccelByte(uint8_t regAdr, uint8_t data);
+void NVIC_Configuration(void);
+void Timer_Configuration(void);
 
 /* Private Global Variables */
 __IO uint8_t outBuffer[OUTBUFFERSIZE];	// stores synthesized note waveform
@@ -46,6 +48,56 @@ __IO uint32_t duration = 34100;	//  duration of note
 __IO char melody[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
 
 
+// Timer 2 IRQ Handler
+void TIM2_IRQHandler(void)
+{
+	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+
+		// Accelerometer Variables
+		int32_t temp;
+		float accX, accY, accZ = 0;
+		float roll, pitch = 0;
+		float hyp = 0;
+		temp = 0;
+
+		/* Read X Acceleration */
+		temp = writeAccelByte(OUTX, 0x00);
+		accX = (18/1000.0) * 9.81 * temp;
+
+		/* Read Y Acceleration */
+		temp = writeAccelByte(OUTY, 0x00);
+		accY = (18/1000.0) * 9.81 * temp;
+		/* Read Z Acceleration */
+		temp = writeAccelByte(OUTZ, 0x00);
+		accZ = (18/1000.0) * 9.81 * temp;
+		/* Calculate Attitude */
+		roll = atan2(accY,accZ);
+		pitch = atan2(-accX,(sqrt((accY*accY) + (accZ*accZ))));
+		/* Do the LED pitch thing */
+		if(pitch < 0)
+		{
+			STM_EVAL_LEDOn(LED6);
+			STM_EVAL_LEDOff(LED3);
+		}
+		else
+		{
+			STM_EVAL_LEDOff(LED6);
+			STM_EVAL_LEDOn(LED3);
+		}
+		if(roll < 0)
+		{
+			STM_EVAL_LEDOn(LED4);
+			STM_EVAL_LEDOff(LED5);
+		}
+		else
+		{
+			STM_EVAL_LEDOff(LED4);
+			STM_EVAL_LEDOn(LED5);
+		}
+	}
+}
 
 int main(void)
 {
@@ -78,6 +130,9 @@ int main(void)
 
 	RCC_Configuration();
 
+	NVIC_Configuration();
+	Timer_Configuration();
+
 	RNG_Configuration();
 
 	codec_init();
@@ -86,12 +141,7 @@ int main(void)
 	I2S_Cmd(CODEC_I2S, ENABLE);
 
 
-	// Accelerometer Variables
-	int32_t temp;
-	float accX, accY, accZ = 0;
-	float roll, pitch = 0;
-	float hyp = 0;
-	temp = 0;
+
 
 	/* Delay 3ms so that Accelerometer can startup */
 	delay_ms(3);
@@ -147,40 +197,6 @@ int main(void)
 	volatile int8_t g = 0;
 	while(1)
 	{
-		/* Read X Acceleration */
-		temp = writeAccelByte(OUTX, 0x00);
-		accX = (18/1000.0) * 9.81 * temp;
-
-		/* Read Y Acceleration */
-		temp = writeAccelByte(OUTY, 0x00);
-		accY = (18/1000.0) * 9.81 * temp;
-		/* Read Z Acceleration */
-		temp = writeAccelByte(OUTZ, 0x00);
-		accZ = (18/1000.0) * 9.81 * temp;
-		/* Calculate Attitude */
-		float roll = atan2(accY,accZ);
-		float pitch = atan2(-accX,(sqrt((accY*accY) + (accZ*accZ))));
-		/* Do the LED pitch thing */
-		if(pitch < 0)
-		{
-			STM_EVAL_LEDOn(LED6);
-			STM_EVAL_LEDOff(LED3);
-		}
-		else
-		{
-			STM_EVAL_LEDOff(LED6);
-			STM_EVAL_LEDOn(LED3);
-		}
-		if(roll < 0)
-		{
-			STM_EVAL_LEDOn(LED4);
-			STM_EVAL_LEDOff(LED5);
-		}
-		else
-		{
-			STM_EVAL_LEDOff(LED4);
-			STM_EVAL_LEDOn(LED5);
-		}
 
 
 
@@ -413,6 +429,8 @@ void SPI_Configuration(void)
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
 
+	// SPI_I2S_ITConfig()
+
 	//Complete
 	SPI_Init(SPI1, &SPI_InitStructure);
 
@@ -456,6 +474,36 @@ int32_t writeAccelByte(uint8_t regAdr, uint8_t data)
 
 }
 
+void NVIC_Configuration(void)
+{
+	NVIC_InitTypeDef NVIC_InitStructure;
+
+	/* Enable the TIM2 global Interrupt */
+	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;//set up the interrupt handler for TIM2
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+
+	NVIC_Init(&NVIC_InitStructure);
+}
+
+void Timer_Configuration(void)
+{
+	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStruct;
+	/* pack Timer struct */
+
+	TIM_TimeBaseStruct.TIM_Period = 10000-1;
+	TIM_TimeBaseStruct.TIM_Prescaler = 16800-1; // 0.5 Hz
+	TIM_TimeBaseStruct.TIM_ClockDivision = 0;
+	TIM_TimeBaseStruct.TIM_CounterMode = TIM_CounterMode_Up;
+
+	/* Call init function */
+	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStruct);
+	//set up the interrupt
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+	// Enable
+	TIM_Cmd(TIM2, ENABLE);
+}
 
 // Random Number Generator setup
 void RNG_Configuration(void)
