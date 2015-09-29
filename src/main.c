@@ -7,6 +7,7 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_rcc.h"
 #include "codec.h"
+#include "stm32f4xx_it.h"
 
 #define DELAY 60
 #define CTRL_REG1 0x20
@@ -29,6 +30,9 @@ void delay_ms(uint32_t milli);
 int32_t writeAccelByte(uint8_t regAdr, uint8_t data);
 void NVIC_Configuration(void);
 void Timer_Configuration(void);
+void TIM2_IRQHandler(void);
+
+int play = 0;
 
 /* Private Global Variables */
 __IO uint8_t outBuffer[OUTBUFFERSIZE];	// stores synthesized note waveform
@@ -47,6 +51,13 @@ __IO uint32_t duration = 34100;	//  duration of note
 
 __IO char melody[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
 
+__IO int32_t temp = 0;
+__IO int32_t temp1 = 0;
+__IO int32_t temp2 = 0;
+__IO float accX, accY, accZ = 0;
+__IO float roll, pitch = 0;
+__IO float hyp = 0;
+
 
 // Timer 2 IRQ Handler
 void TIM2_IRQHandler(void)
@@ -55,12 +66,14 @@ void TIM2_IRQHandler(void)
 	{
 		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 
+		STM_EVAL_LEDToggle(LED6);
+		//STM_EVAL_LEDOn(LED4);
+		//STM_EVAL_LEDOn(LED5);
+		//STM_EVAL_LEDOn(LED6);
+		temp1++;
+		temp2 = temp1+1;
 		// Accelerometer Variables
-		int32_t temp;
-		float accX, accY, accZ = 0;
-		float roll, pitch = 0;
-		float hyp = 0;
-		temp = 0;
+
 
 		/* Read X Acceleration */
 		temp = writeAccelByte(OUTX, 0x00);
@@ -69,12 +82,20 @@ void TIM2_IRQHandler(void)
 		/* Read Y Acceleration */
 		temp = writeAccelByte(OUTY, 0x00);
 		accY = (18/1000.0) * 9.81 * temp;
+
 		/* Read Z Acceleration */
 		temp = writeAccelByte(OUTZ, 0x00);
 		accZ = (18/1000.0) * 9.81 * temp;
+
+		if(accX !=  0)
+		{
+			//STM_EVAL_LEDOn(LED3);
+		}
+
 		/* Calculate Attitude */
 		roll = atan2(accY,accZ);
 		pitch = atan2(-accX,(sqrt((accY*accY) + (accZ*accZ))));
+
 		/* Do the LED pitch thing */
 		if(pitch < 0)
 		{
@@ -110,45 +131,45 @@ int main(void)
 	STM_EVAL_LEDInit(LED6);
 
 	/* Turn off all LEDs */
-	STM_EVAL_LEDOff(LED3);
-	STM_EVAL_LEDOff(LED4);
-	STM_EVAL_LEDOff(LED5);
-	STM_EVAL_LEDOff(LED6);
+	//STM_EVAL_LEDOff(LED3);
+	//STM_EVAL_LEDOff(LED4);
+	//STM_EVAL_LEDOff(LED5);
+	//STM_EVAL_LEDOff(LED6);
 
 	//Initialize user button
 	STM_EVAL_PBInit(BUTTON_USER, BUTTON_MODE_GPIO);
 
 	//enables GPIO clock for PortD
 	//RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-	GPIO_InitTypeDef GPIO_InitStructure;
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+//	GPIO_InitTypeDef GPIO_InitStructure;
+//	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
+//	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+//	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+//	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
-	GPIO_Init(GPIOD, &GPIO_InitStructure);
+	//GPIO_Init(GPIOD, &GPIO_InitStructure);
 
 	RCC_Configuration();
 
 	NVIC_Configuration();
 	Timer_Configuration();
 
-	RNG_Configuration();
+	//RNG_Configuration();
 
-	codec_init();
-	codec_ctrl_init();
+	//codec_init();
+	//codec_ctrl_init();
 
-	I2S_Cmd(CODEC_I2S, ENABLE);
+	//I2S_Cmd(CODEC_I2S, ENABLE);
 
 
 
 
 	/* Delay 3ms so that Accelerometer can startup */
-	delay_ms(3);
+	//delay_ms(3);
 
 	/* Accelerometer Peripheral Initialization */
-   GPIO_Configuration();
-   SPI_Configuration();
+   //GPIO_Configuration();
+   //SPI_Configuration();
 
    /* Send setup byte to Control Register 1*/
 	(void)writeAccelByte(CTRL_REG1, 0x47);
@@ -184,7 +205,7 @@ int main(void)
 	//STM_EVAL_LEDOn(LED4);
 	//STM_EVAL_LEDOff(LED5);
 
-	for (n = 0; n<DACBUFFERSIZE; n++)
+	/*for (n = 0; n<DACBUFFERSIZE; n++)
 	{
 		while(RNG_GetFlagStatus(RNG_FLAG_DRDY) == 0);
 		random = RNG_GetRandomNumber();
@@ -192,16 +213,22 @@ int main(void)
 		noiseBuffer[n] = (uint8_t)(((0xFF+1)/2)*(2*(((float)random)/0xFFFFFFFF)));
 		DACBuffer[n] = noiseBuffer[n];
 		RNG_ClearFlag(RNG_FLAG_DRDY);
-	}
+	}*/
 
 	volatile int8_t g = 0;
 	while(1)
 	{
 
+		/*int timerValue = TIM_GetCounter(TIM2);
+		if (timerValue == 400)
+			STM_EVAL_LEDOn(LED5);
+			//GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_SET);
+		else if (timerValue == 500)
+			STM_EVAL_LEDOff(LED5);
+			//GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_RESET);*/
 
-
-		int mSize = sizeof (melody) / sizeof (char);
-		for(g = 0 ; g < mSize ; g++)
+		/*int mSize = sizeof (melody) / sizeof (char);
+		for(g = 0 ; g < 1 ; g++)
 		{
 			if(melody[g] == 'G')
 			{
@@ -253,13 +280,13 @@ int main(void)
 				{
 					f--;
 				}
-			}
+			}*/
 
 
+//////------------------------------------------------------------------------
 
 
-
-		// update buffer length according to note desired
+		/*// update buffer length according to note desired
 		DACBufferSize = (uint16_t)(((float)44100/(noteFreq*pow(2, octave))));
 		if(DACBufferSize & 0x00000001)
 			DACBufferSize +=1;
@@ -359,13 +386,15 @@ int main(void)
 			{
 				SPI_I2S_SendData(CODEC_I2S, 0);
 			}
-		}
+		}*/
+
+		///////-------------------------------------------------------------------------------------
 
 
+	//}
 	}
-	}
 
-
+	return 0;
 
 }
 
@@ -377,8 +406,8 @@ void RCC_Configuration(void)
 	// enable clock for Random Number Generator
 	RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_RNG, ENABLE);
 
-	// enable clock for timers 2 and 5
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5|RCC_APB1Periph_TIM2, ENABLE);
+	// enable clock for timer 2
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
 	// enable clock for SYSCFG for EXTI
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG|RCC_APB2Periph_ADC1, ENABLE);
@@ -392,7 +421,7 @@ void GPIO_Configuration(void)
 	GPIO_InitTypeDef GPIO_InitStruct;
 
 	/* Pack the struct */
-	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
@@ -429,7 +458,7 @@ void SPI_Configuration(void)
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
 
-	// SPI_I2S_ITConfig()
+
 
 	//Complete
 	SPI_Init(SPI1, &SPI_InitStructure);
@@ -481,7 +510,7 @@ void NVIC_Configuration(void)
 	/* Enable the TIM2 global Interrupt */
 	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;//set up the interrupt handler for TIM2
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 
 	NVIC_Init(&NVIC_InitStructure);
@@ -491,10 +520,12 @@ void Timer_Configuration(void)
 {
 	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStruct;
 	/* pack Timer struct */
+	TIM_TimeBaseStructInit(&TIM_TimeBaseStruct);
 
 	TIM_TimeBaseStruct.TIM_Period = 10000-1;
-	TIM_TimeBaseStruct.TIM_Prescaler = 16800-1; // 0.5 Hz
-	TIM_TimeBaseStruct.TIM_ClockDivision = 0;
+	TIM_TimeBaseStruct.TIM_Prescaler = 8400-1; // 0.5 Hz
+	TIM_TimeBaseStruct.TIM_ClockDivision = TIM_CKD_DIV1;
+	TIM_TimeBaseStruct.TIM_RepetitionCounter = 0xFF;
 	TIM_TimeBaseStruct.TIM_CounterMode = TIM_CounterMode_Up;
 
 	/* Call init function */
@@ -510,6 +541,7 @@ void RNG_Configuration(void)
 {
 	RNG_Cmd(ENABLE);
 }
+
 
 void delay_ms(uint32_t milli)
 {
