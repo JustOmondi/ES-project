@@ -1,13 +1,12 @@
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+
 #include "stm32f4xx.h"
 #include "stm32f4_discovery.h"
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_rcc.h"
 #include "codec.h"
 #include "stm32f4xx_it.h"
+#include <math.h>
 
 #define DELAY 60
 #define CTRL_REG1 0x20
@@ -18,8 +17,8 @@
 #define SAMPLE_RATE 44100
 #define DECAY_FACTOR 0.996
 /* Private Macros */
-#define OUTBUFFERSIZE 44100
-#define DACBUFFERSIZE 1200
+#define OUTBUFFERSIZE 88200
+#define DACBUFFERSIZE 5000
 
 //Function prototypes
 void RCC_Configuration(void);
@@ -28,9 +27,7 @@ void GPIO_Configuration(void);
 void SPI_Configuration(void);
 void delay_ms(uint32_t milli);
 int32_t writeAccelByte(uint8_t regAdr, uint8_t data);
-void NVIC_Configuration(void);
-void Timer_Configuration(void);
-void TIM2_IRQHandler(void);
+void checkAcc(void);
 
 int play = 0;
 
@@ -43,11 +40,12 @@ __IO uint8_t mux_enable = 1;			// flag to indicate if multiplexer is cycling thr
 __IO uint8_t electrify = 0;				// flag to set/reset electric (reverb) mode
 __IO uint8_t counter = 0;
 __IO uint8_t stringNo = 6;				// default guitar string
-__IO uint8_t octave = 2;				// default octave
+//__IO uint8_t octave = 2;				// default octave
+__IO float octave = 2;
 __IO float noteFreq = 20.6;				// default note frequency
 __IO float amplitude = 5.0;		// volume
 __IO float volume = 0.5;
-__IO uint32_t duration = 34100;	//  duration of note
+__IO uint32_t duration = 44100;	//  duration of note
 
 __IO char melody[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
 
@@ -55,69 +53,67 @@ __IO int32_t temp = 0;
 __IO int32_t temp1 = 0;
 __IO int32_t temp2 = 0;
 __IO float accX, accY, accZ = 0;
-__IO float roll, pitch = 0;
-__IO float hyp = 0;
+ float roll, pitch = 0;
 
 
-// Timer 2 IRQ Handler
-void TIM2_IRQHandler(void)
+
+void checkAcc(void)
 {
-	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+	/* Read X Acceleration */
+	temp = writeAccelByte(OUTX, 0x00);
+	accX = (18/1000.0) * 9.81 * temp;
+
+	/* Read Y Acceleration */
+	temp = writeAccelByte(OUTY, 0x00);
+	accY = (18/1000.0) * 9.81 * temp;
+
+	/* Read Z Acceleration */
+	temp = writeAccelByte(OUTZ, 0x00);
+	accZ = (18/1000.0) * 9.81 * temp;
+
+
+	/* Calculate Attitude */
+	pitch = atan2(accY,accZ); //octave
+	pitch = pitch*((180/M_PI));
+	roll = atan2(-accX,(sqrt((accY*accY) + (accZ*accZ)))); //speed
+	roll = roll*((float)(180/M_PI));
+
+ float r = pitch;
+ float y = roll;
+
+
+	if(y > 0)
 	{
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-
-		STM_EVAL_LEDToggle(LED6);
-		//STM_EVAL_LEDOn(LED4);
-		//STM_EVAL_LEDOn(LED5);
-		//STM_EVAL_LEDOn(LED6);
-		temp1++;
-		temp2 = temp1+1;
-		// Accelerometer Variables
-
-
-		/* Read X Acceleration */
-		temp = writeAccelByte(OUTX, 0x00);
-		accX = (18/1000.0) * 9.81 * temp;
-
-		/* Read Y Acceleration */
-		temp = writeAccelByte(OUTY, 0x00);
-		accY = (18/1000.0) * 9.81 * temp;
-
-		/* Read Z Acceleration */
-		temp = writeAccelByte(OUTZ, 0x00);
-		accZ = (18/1000.0) * 9.81 * temp;
-
-		if(accX !=  0)
-		{
-			//STM_EVAL_LEDOn(LED3);
-		}
-
-		/* Calculate Attitude */
-		roll = atan2(accY,accZ);
-		pitch = atan2(-accX,(sqrt((accY*accY) + (accZ*accZ))));
-
-		/* Do the LED pitch thing */
-		if(pitch < 0)
-		{
-			STM_EVAL_LEDOn(LED6);
-			STM_EVAL_LEDOff(LED3);
-		}
-		else
-		{
-			STM_EVAL_LEDOff(LED6);
-			STM_EVAL_LEDOn(LED3);
-		}
-		if(roll < 0)
-		{
-			STM_EVAL_LEDOn(LED4);
-			STM_EVAL_LEDOff(LED5);
-		}
-		else
-		{
-			STM_EVAL_LEDOff(LED4);
-			STM_EVAL_LEDOn(LED5);
-		}
+		int f = 4;
 	}
+	else if(r < 0)
+	{
+		int p = 9;
+	}
+
+
+
+	/* Do the LED pitch thing */
+//	if(pitch < 0)
+//	{
+//		STM_EVAL_LEDOn(LED6);
+//		STM_EVAL_LEDOff(LED3);
+//	}
+//	else
+//	{
+//		STM_EVAL_LEDOff(LED6);
+//		STM_EVAL_LEDOn(LED3);
+//	}
+//	if(roll < 0)
+//	{
+//		STM_EVAL_LEDOn(LED4);
+//		STM_EVAL_LEDOff(LED5);
+//	}
+//	else
+//	{
+//		STM_EVAL_LEDOff(LED4);
+//		STM_EVAL_LEDOn(LED5);
+//	}
 }
 
 int main(void)
@@ -139,37 +135,25 @@ int main(void)
 	//Initialize user button
 	STM_EVAL_PBInit(BUTTON_USER, BUTTON_MODE_GPIO);
 
-	//enables GPIO clock for PortD
-	//RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-//	GPIO_InitTypeDef GPIO_InitStructure;
-//	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
-//	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-//	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-//	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-
-	//GPIO_Init(GPIOD, &GPIO_InitStructure);
 
 	RCC_Configuration();
 
-	NVIC_Configuration();
-	Timer_Configuration();
+	RNG_Configuration();
 
-	//RNG_Configuration();
+	codec_init();
+	codec_ctrl_init();
 
-	//codec_init();
-	//codec_ctrl_init();
-
-	//I2S_Cmd(CODEC_I2S, ENABLE);
+	I2S_Cmd(CODEC_I2S, ENABLE);
 
 
 
 
 	/* Delay 3ms so that Accelerometer can startup */
-	//delay_ms(3);
+	delay_ms(3);
 
 	/* Accelerometer Peripheral Initialization */
-   //GPIO_Configuration();
-   //SPI_Configuration();
+   GPIO_Configuration();
+   SPI_Configuration();
 
    /* Send setup byte to Control Register 1*/
 	(void)writeAccelByte(CTRL_REG1, 0x47);
@@ -202,10 +186,7 @@ int main(void)
 	uint32_t random = 0;
 	uint8_t b = 0;
 
-	//STM_EVAL_LEDOn(LED4);
-	//STM_EVAL_LEDOff(LED5);
-
-	/*for (n = 0; n<DACBUFFERSIZE; n++)
+	for (n = 0; n<DACBUFFERSIZE; n++)
 	{
 		while(RNG_GetFlagStatus(RNG_FLAG_DRDY) == 0);
 		random = RNG_GetRandomNumber();
@@ -213,22 +194,14 @@ int main(void)
 		noiseBuffer[n] = (uint8_t)(((0xFF+1)/2)*(2*(((float)random)/0xFFFFFFFF)));
 		DACBuffer[n] = noiseBuffer[n];
 		RNG_ClearFlag(RNG_FLAG_DRDY);
-	}*/
+	}
 
 	volatile int8_t g = 0;
 	while(1)
 	{
 
-		/*int timerValue = TIM_GetCounter(TIM2);
-		if (timerValue == 400)
-			STM_EVAL_LEDOn(LED5);
-			//GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_SET);
-		else if (timerValue == 500)
-			STM_EVAL_LEDOff(LED5);
-			//GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_RESET);*/
-
-		/*int mSize = sizeof (melody) / sizeof (char);
-		for(g = 0 ; g < 1 ; g++)
+		int mSize = sizeof (melody) / sizeof (char);
+		for(g = 0 ; g < mSize ; g++)
 		{
 			if(melody[g] == 'G')
 			{
@@ -255,38 +228,99 @@ int main(void)
 				noteFreq = 21.83;
 			}
 
-			if(STM_EVAL_PBGetState(BUTTON_USER) == Bit_SET)
+			checkAcc();
+
+			if(roll < 0)
 			{
-
-				while(STM_EVAL_PBGetState(BUTTON_USER) == Bit_SET)
+				if(roll < 0 && roll > -45)
 				{
-					// send silence to audio DAC while note is being synthesized (gets rid of static noise)
-					if (SPI_I2S_GetFlagStatus(CODEC_I2S, SPI_I2S_FLAG_TXE))
-					{
-						SPI_I2S_SendData(CODEC_I2S, 0);
-					}
+					duration = 44100;
 				}
-				if(octave < 5)
+				else if(roll <= -45 && roll > -90)
 				{
-					octave++;
+					duration = 22050;
 				}
-				else
+				else if(roll <= -90 && roll > -135)
 				{
-					octave = 2;
+					duration = 11025;
 				}
-				break;
-				int f = 20000;
-				while(f > 0)
+				else if(roll <= -135 && roll >= -160)
 				{
-					f--;
+					duration = 5512;
 				}
-			}*/
+			}
+			else if(roll > 0)
+			{
+				if(roll > 0 && roll < 45)
+				{
+					duration = 44100;
+				}
+				else if(roll >= 45 && roll < 90)
+				{
+					duration = 47000;
+				}
+				else if(roll >= 90 && roll < 135)
+				{
+					duration = 53150;
+				}
+				else if(roll >= 135 && roll <= 160)
+				{
+					duration = 55175;
+				}
+			}
+			else if(roll == 0)
+			{
+				duration  = 44100;
+			}
+
+			//octave = 2;
+
+			if(pitch > 0)
+			{
+				octave = 2.5;
+			}
+			else
+			{
+				octave = 2;
+			}
+
+//			if(pitch > 0)
+//			{
+//				if(pitch > 0 && pitch < 22.5)
+//				{
+//					octave = 4;
+//				}
+//				else if(pitch >= 22.5 && pitch < 45)
+//				{
+//					octave = 3;
+//				}
+//				else if(pitch >= 45 && pitch < 67.5)
+//				{
+//					octave = 2;
+//				}
+//			}
+//			else if(pitch < 0)
+//			{
+//				if(pitch < 0 && pitch > -22.5)
+//				{
+//					octave = 4;
+//				}
+//				else if(pitch <= -22.5 && pitch > -45)
+//				{
+//					octave = 5;
+//				}
+//				else if(pitch <= 45 && pitch > -67.5)
+//				{
+//					octave = 6;
+//				}
+//			}
+//			else if(pitch == 0)
+//			{
+//				octave = 4;
+//			}
 
 
-//////------------------------------------------------------------------------
-
-
-		/*// update buffer length according to note desired
+		// update buffer length according to note desired
 		DACBufferSize = (uint16_t)(((float)44100/(noteFreq*pow(2, octave))));
 		if(DACBufferSize & 0x00000001)
 			DACBufferSize +=1;
@@ -294,7 +328,7 @@ int main(void)
 		// Synthesize note
 		volatile uint16_t i;
 		volatile uint16_t j = 0;
-		for(i = 0; i < duration; i++)
+		for(i = 0; i < duration+10000; i++)
 		{
 			// send silence to audio DAC while note is being synthesized (gets rid of static noise)
 			if (SPI_I2S_GetFlagStatus(CODEC_I2S, SPI_I2S_FLAG_TXE))
@@ -312,6 +346,7 @@ int main(void)
 				tempBuffer[j] = (uint8_t)(((DACBuffer[j]+tempBuffer[0])/2.0)*0.999996);
 			}
 			outBuffer[i] = (uint8_t)tempBuffer[j];
+
 			j++;
 
 			// values synthesized are re-used to synthesize newer values (simulates a queue)
@@ -373,9 +408,6 @@ int main(void)
 			}
 		}
 
-		//STM_EVAL_LEDToggle(LED4);
-		//STM_EVAL_LEDToggle(LED5);
-
 		// fill buffer with white noise again
 		for(m=0; m < DACBufferSize; m++)
 		{
@@ -386,12 +418,12 @@ int main(void)
 			{
 				SPI_I2S_SendData(CODEC_I2S, 0);
 			}
-		}*/
+		}
 
 		///////-------------------------------------------------------------------------------------
 
 
-	//}
+	}
 	}
 
 	return 0;
@@ -503,39 +535,6 @@ int32_t writeAccelByte(uint8_t regAdr, uint8_t data)
 
 }
 
-void NVIC_Configuration(void)
-{
-	NVIC_InitTypeDef NVIC_InitStructure;
-
-	/* Enable the TIM2 global Interrupt */
-	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;//set up the interrupt handler for TIM2
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-
-	NVIC_Init(&NVIC_InitStructure);
-}
-
-void Timer_Configuration(void)
-{
-	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStruct;
-	/* pack Timer struct */
-	TIM_TimeBaseStructInit(&TIM_TimeBaseStruct);
-
-	TIM_TimeBaseStruct.TIM_Period = 10000-1;
-	TIM_TimeBaseStruct.TIM_Prescaler = 8400-1; // 0.5 Hz
-	TIM_TimeBaseStruct.TIM_ClockDivision = TIM_CKD_DIV1;
-	TIM_TimeBaseStruct.TIM_RepetitionCounter = 0xFF;
-	TIM_TimeBaseStruct.TIM_CounterMode = TIM_CounterMode_Up;
-
-	/* Call init function */
-	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStruct);
-	//set up the interrupt
-	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
-	// Enable
-	TIM_Cmd(TIM2, ENABLE);
-}
-
 // Random Number Generator setup
 void RNG_Configuration(void)
 {
@@ -567,100 +566,3 @@ uint16_t EVAL_AUDIO_GetSampleCallBack(void){
   /* TODO, implement your code here */
   return -1;
 }
-
-//-------------------------------------------------------------------------------------------
-		/*// Generate buffer of size @ref SIZE with random numbers between 0 and 1
-		for(n = 0;n<SIZE;n++)
-		{
-			dacBuffer[n] = (rand() % 100) * 0.01;
-			//printf("%.3f", dacBuffer[i]);
-		}
-
-		// Initiate prev variable to a random number
-		prev = (rand() % 100) * 0.01;
-
-		int16_t j = 0;
-		// Loop continuously through the buffer averaging each value with its previous value
-		for(j = 0; j < 30000 ; j++)
-		{
-			// Take single value from the end of the queue and average it with
-			// the value before it in the queue
-			float avg = (dacBuffer[SIZE - 1] + prev) * 0.5;
-
-			if(j%1000 == 0)
-			{
-				STM_EVAL_LEDToggle(LED5);
-			}
-
-			// Scale average
-			avg = avg * 0.0996;
-			prev = dacBuffer[SIZE-1];
-
-			int16_t i;
-
-			// Shift each value up in the queue
-			for(i = SIZE-1 ; i > 0 ; i--)
-			{
-				dacBuffer[i] = dacBuffer[i-1];
-			}
-
-			// Add average as new value to the start of the queue
-			dacBuffer[0] = avg;
-
-
-			// Set prev variable as
-			uint16_t num = avg*AMPLITUDE;
-
-			// Wait for SPI to be ready
-			if (SPI_I2S_GetFlagStatus(CODEC_I2S, SPI_I2S_FLAG_TXE))
-			{
-				STM_EVAL_LEDToggle(LED6);
-				// Send data to SPI
-				SPI_I2S_SendData(CODEC_I2S, num);
-
-			}
-			else
-			{
-				STM_EVAL_LEDToggle(LED3);
-			}
-		}
-
-		STM_EVAL_LEDToggle(LED4);*/
-//-------------------------------------------------------------------------------------------
-/*
-if(g == 0)
-{
-	noteFreq = 24.5;
-	//octave = 1;
-}
-else if(g == 1)
-{
-	noteFreq = 16.35;
-	//octave = 1;
-}
-else if(g == 2)
-{
-	noteFreq = 24.5;
-	//octave = 7;
-}
-else if(g == 3)
-{
-	noteFreq = 16.35;
-	//octave = 7;
-}
-else if(g == 4)
-{
-	noteFreq = 24.5;
-	//octave = 7;
-}
-else if(g == 5)
-{
-	noteFreq = 18.35;
-	//octave = 7;
-}
-else if(g == 6)
-{
-	noteFreq = 24.5;
-	//octave = 7;
-}
-*/
