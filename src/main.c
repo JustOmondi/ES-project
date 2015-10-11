@@ -49,6 +49,7 @@ __IO uint32_t duration = 44100;	//  duration of note
 
 __IO char twinkle[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
 __IO char littleLamb[26] = {'E','D', 'C','D', 'E','E','E','D','D','D','E','G','G','E','D','C','D','E','E','E','E','D','D','E','D','C'};
+__IO char letItGo[96] = {'G','F','G','D','D','G','G','E','E','E','E','F','G','G','F','G','D','D','G','G','A','B','C','B','A','G','G','B','B','B','B','B','B','A','G','G','G','A','A','G','G','A','G','B','B','B','D','E','D','A','G', 'A','A','A','G','A','B','B','D','E','D','B','D','D','D','C','B','C','B','B','A','B','A','G','A','A','B','C','B','G','F','G','D','D','G','G','C','C','C','C','B','B','C','B','G'};
 
 __IO int32_t temp = 0;
 __IO int32_t temp1 = 0;
