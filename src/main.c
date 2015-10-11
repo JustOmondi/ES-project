@@ -48,7 +48,7 @@ __IO float volume = 0.5;
 __IO uint32_t duration = 44100;	//  duration of note
 
 __IO char twinkle[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
-__IO char melody[26] = {'E','D', 'C','D', 'E','E','E','D','D','D','E','G','G','E','D','C','D','E','E','E','E','D','D','E','D','C'};
+__IO char littleLamb[26] = {'E','D', 'C','D', 'E','E','E','D','D','D','E','G','G','E','D','C','D','E','E','E','E','D','D','E','D','C'};
 
 __IO int32_t temp = 0;
 __IO int32_t temp1 = 0;
@@ -63,29 +63,29 @@ volatile uint8_t tempBuffer[DACBUFFERSIZE];
 volatile uint8_t noiseBuffer[DACBUFFERSIZE];
 uint16_t DACBufferSize;
 
-void setNoteFrequency(uint8_t i)
+void setNoteFrequency(char notes[], uint8_t i)
 {
-	if(melody[i] == 'G')
+	if(notes[i] == 'G')
 	{
 		noteFreq = 24.5;
 	}
-	else if(melody[i] == 'C')
+	else if(notes[i] == 'C')
 	{
 		noteFreq = 16.35;
 	}
-	else if(melody[i] == 'D')
+	else if(notes[i] == 'D')
 	{
 		noteFreq = 18.35;
 	}
-	else if(melody[i] == 'A')
+	else if(notes[i] == 'A')
 	{
 		noteFreq = 27.5;
 	}
-	else if(melody[i] == 'E')
+	else if(notes[i] == 'E')
 	{
 		noteFreq = 20.60;
 	}
-	else if(melody[i] == 'F')
+	else if(notes[i] == 'F')
 	{
 		noteFreq = 21.83;
 	}
@@ -308,7 +308,7 @@ int main(void)
 	while(1)
 	{
 
-		int size = sizeof (melody) / sizeof (char);
+		int size = sizeof (notes) / sizeof (char);
 		for(g = 0 ; g < size ; g++)
 		{
 			// Set frequency of note
