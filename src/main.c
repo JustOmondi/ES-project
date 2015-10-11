@@ -32,7 +32,7 @@ void delay_ms(uint32_t milli);
 int32_t writeAccelByte(uint8_t regAdr, uint8_t data);
 void checkAcc(void);
 void updatePitchAndSpeed(uint16_t amount);
-void setNoteFrequency(uint8_t i);
+void setNoteFrequency(char notes[], uint8_t i);
 void generateNote(void);
 void peripheralInit(void);
 
@@ -47,9 +47,11 @@ __IO float amplitude = 5.0;		// volume
 __IO float volume = 0.5;
 __IO uint32_t duration = 44100;	//  duration of note
 
+// Melody arrays
 __IO char twinkle[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
 __IO char littleLamb[26] = {'E','D', 'C','D', 'E','E','E','D','D','D','E','G','G','E','D','C','D','E','E','E','E','D','D','E','D','C'};
 __IO char letItGo[96] = {'G','F','G','D','D','G','G','E','E','E','E','F','G','G','F','G','D','D','G','G','A','B','C','B','A','G','G','B','B','B','B','B','B','A','G','G','G','A','A','G','G','A','G','B','B','B','D','E','D','A','G', 'A','A','A','G','A','B','B','D','E','D','B','D','D','D','C','B','C','B','B','A','B','A','G','A','A','B','C','B','G','F','G','D','D','G','G','C','C','C','C','B','B','C','B','G'};
+__IO char masterpiece[18] = {'A','A','F','D','G','G','A','A','F','D','G','G','A','A','F','D','G','G'};
 
 __IO int32_t temp = 0;
 __IO int32_t temp1 = 0;
@@ -309,26 +311,30 @@ int main(void)
 	while(1)
 	{
 
-		int size = sizeof (notes) / sizeof (char);
+		int size = sizeof (masterpiece) / sizeof (char);
 		for(g = 0 ; g < size ; g++)
 		{
 			// Set frequency of note
-			setNoteFrequency(g);
+			setNoteFrequency(masterpiece, g);
 
-			if(g == 6 || g == 13 || g == 20 || g == 27 || g == 34)
-			{
-				// Update pitch & speed depending on accelerometer orientation
-				updatePitchAndSpeed(DURATION_DELAY);
-			}
-			else if(g == 41)
-			{
-				// Update pitch & speed depending on accelerometer orientation
-				updatePitchAndSpeed(DURATION_END);
-			}
-			else
-			{
-				updatePitchAndSpeed(DURATION);
-			}
+			updatePitchAndSpeed(DURATION);
+
+
+
+//			if(g == 6 || g == 13 || g == 20 || g == 27 || g == 34)
+//			{
+//				// Update pitch & speed depending on accelerometer orientation
+//				updatePitchAndSpeed(DURATION_DELAY);
+//			}
+//			else if(g == 41)
+//			{
+//				// Update pitch & speed depending on accelerometer orientation
+//				updatePitchAndSpeed(DURATION_END);
+//			}
+//			else
+//			{
+//				updatePitchAndSpeed(DURATION);
+//			}
 
 
 			// Generate note
