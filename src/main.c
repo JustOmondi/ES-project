@@ -42,14 +42,15 @@ void updatePitchAndSpeed(uint16_t amount);
 void setNoteFrequency(char notes[], uint8_t i);
 void generateNote(void);
 void peripheralInit(void);
+
+//Melody function prototypes
 void playTwinkle(void);
 void playLittleLamb(void);
 void playJingleBells(void);
 void playHappyBirthday(void);
+
+
 void EXTI1_IRQHandler(void);
-
-//Melody methods
-
 
 
 // Status variables
@@ -75,7 +76,8 @@ __IO uint32_t duration = 44100;	//  duration of note
 __IO char twinkle[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
 __IO char littleLamb[26] = {'E','D', 'C','D', 'E','E','E','D','D','D','E','G','G','E','D','C','D','E','E','E','E','D','D','E','D','C'};
 __IO char jingleBells[51] = {'E','E','E','E','E','E','E','G','C','D','E','F','F','F','F','F','E','E','E','E','E','D','D','E','D','G','E','E','E','E','E','E','E','G','C','D','E','F','F','F','F','F','E','E','E','E','G','G','F','D','C'};
-__IO char happyBirthday[51];
+__IO char happyBirthday[25] = {'G','G','A','G','C','B','G','G','A','G','D','C','G','G','G','E','C','B','A','F','F','E','C','D','C'};
+
 
 __IO int32_t temp = 0;
 __IO int32_t temp1 = 0;
@@ -487,6 +489,7 @@ void playLittleLamb(void)
 	}
 
 }
+
 void playTwinkle(void)
 {
 	// Loop variable
@@ -688,6 +691,126 @@ void playJingleBells(void)
 
 		// Set frequency of note
 		setNoteFrequency(jingleBells, g);
+
+
+		//enable button
+		uint8_t enabled = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_5);
+
+		//ENABLE ACCELEROMETER IF ENABLE BUTTON IS PRESSED
+		if( enabled == 1)
+		{
+
+			STM_EVAL_LEDOn(GREENLED);
+			updatePitchAndSpeed(DURATION);
+
+
+			if(g == 6 || g == 13 || g == 20 || g == 27 || g == 34)
+			{
+				// Update pitch & speed depending on accelerometer orientation
+				updatePitchAndSpeed(DURATION_DELAY);
+			}
+			else if(g == 41)
+			{
+				// Update pitch & speed depending on accelerometer orientation
+				updatePitchAndSpeed(DURATION_END);
+			}
+			else
+			{
+				updatePitchAndSpeed(DURATION);
+			}
+
+		}
+
+		else
+		{
+			STM_EVAL_LEDOff(GREENLED);
+			//code to disable accelerometer
+		}
+
+		// Generate note
+		generateNote();
+
+	}
+}
+
+void playHappyBirthday(void)
+{
+	// Loop variable
+		volatile int8_t g = 0;
+	int size = sizeof (happyBirthday) / sizeof (char);
+	for(g = 0 ; g < size ; g++)
+	{
+		//if( (mode == 1) && (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1) == 1)) // Mode changed to usb
+			//break;
+
+
+		// Change mode between USB and algorithm
+	/*---------------------------------------------------------------------------------------------------------------*/
+
+		/*uint8_t modeValue = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
+		if(modeValue == 1)
+		{
+			if((mode == 5) || (mode == 0))
+			{
+				GPIO_SetBits(GPIOD,GPIO_Pin_15);
+				mode=1;
+				//code for karplus synthesis
+			}
+
+			else if(mode == 1)
+			{
+				GPIO_ResetBits(GPIOD,GPIO_Pin_15);
+				mode=0;
+				break;
+				// swicth to USb mode
+			}
+
+
+			//debounce
+			uint32_t smalldelay = 10000;
+			for(;smalldelay > 0; smalldelay--);
+		}*/
+
+	/*----------------------------------------------------------------------------------------------------------------------*/
+
+
+		//using next button
+	/*----------------------------------------------------------------------------------------------------------------------*/
+		uint8_t next = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_10);
+		if(next == 1)
+		{
+			STM_EVAL_LEDOn(ORANGELED);
+			break;
+		}
+		else
+		{
+			STM_EVAL_LEDOff(ORANGELED);
+		}
+
+/*----------------------------------------------------------------------------------------------------------------------*/
+
+
+
+		//play and pause
+/*----------------------------------------------------------------------------------------------------------------------*/
+		if((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==1) && (playing == 1)) // paused
+		{
+			currentNote = g;
+			GPIO_ResetBits(GPIOD,GPIO_Pin_5);
+			playing = 0;
+			break;
+		}
+		/*if((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==1) && (playing == 0)) // play from pause
+		{
+			g= currentNote;
+
+		}
+*/
+
+
+
+		// Set frequency of note
+		setNoteFrequency(happyBirthday, g);
 
 
 		//enable button
