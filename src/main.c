@@ -734,6 +734,7 @@ void playNokiaTune(void)
 
 	}
 }
+
 void playJingleBells(void)
 {
 	// Loop variable
@@ -928,11 +929,8 @@ void playHappyBirthday(void)
 		}
 */
 
-
-
 		// Set frequency of note
 		setNoteFrequency(happyBirthday, g);
-
 
 		//enable button
 		uint8_t enabled = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_5);
@@ -945,12 +943,12 @@ void playHappyBirthday(void)
 			updatePitchAndSpeed(DURATION);
 
 
-			if(g == 6 || g == 13 || g == 20 || g == 27 || g == 34)
+			if((g >= 2 && g <= 5) || (g >= 8 && g <= 11) || g == 18 || (g >= size-4 && g <= size-1))
 			{
 				// Update pitch & speed depending on accelerometer orientation
 				updatePitchAndSpeed(DURATION_DELAY);
 			}
-			else if(g == 41)
+			else if(g == size-1)
 			{
 				// Update pitch & speed depending on accelerometer orientation
 				updatePitchAndSpeed(DURATION_END);
