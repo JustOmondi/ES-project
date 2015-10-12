@@ -14,6 +14,12 @@
 #define OUTY 0xAB
 #define OUTZ 0xAD
 
+
+#define GREENLED LED4
+#define ORANGELED LED3
+#define BLUELED LED6
+#define REDLED LED5
+
 #define SAMPLE_RATE 44100
 #define DECAY_FACTOR 0.996
 #define DURATION 24100
@@ -27,6 +33,7 @@
 void RCC_Configuration(void);
 void RNG_Configuration(void);
 void GPIO_Configuration(void);
+void Button_GPIO_Configuration(void);
 void SPI_Configuration(void);
 void delay_ms(uint32_t milli);
 int32_t writeAccelByte(uint8_t regAdr, uint8_t data);
@@ -35,8 +42,22 @@ void updatePitchAndSpeed(uint16_t amount);
 void setNoteFrequency(char notes[], uint8_t i);
 void generateNote(void);
 void peripheralInit(void);
+void playTwinkle(void);
+void EXTI1_IRQHandler(void);
 
-int play = 0;
+//Melody methods
+
+
+
+// Status variables
+uint8_t playing = 4; // 0 - Paused, 1 - playing
+uint8_t enabled = 0;
+__IO uint8_t mode = 5; // 0 - Algorithm mode, 1 - USb mode
+uint8_t currentSong = 1;
+uint8_t currentNote;
+
+
+
 
 /* Private Global Variables */
 __IO uint8_t outBuffer[OUTBUFFERSIZE];	// stores synthesized note waveform
@@ -51,7 +72,7 @@ __IO uint32_t duration = 44100;	//  duration of note
 __IO char twinkle[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
 __IO char littleLamb[26] = {'E','D', 'C','D', 'E','E','E','D','D','D','E','G','G','E','D','C','D','E','E','E','E','D','D','E','D','C'};
 __IO char letItGo[96] = {'G','F','G','D','D','G','G','E','E','E','E','F','G','G','F','G','D','D','G','G','A','B','C','B','A','G','G','B','B','B','B','B','B','A','G','G','G','A','A','G','G','A','G','B','B','B','D','E','D','A','G', 'A','A','A','G','A','B','B','D','E','D','B','D','D','D','C','B','C','B','B','A','B','A','G','A','A','B','C','B','G','F','G','D','D','G','G','C','C','C','C','B','B','C','B','G'};
-__IO char masterpiece[18] = {'A','A','F','D','G','G','A','A','F','D','G','G','A','A','F','D','G','G'};
+
 
 __IO int32_t temp = 0;
 __IO int32_t temp1 = 0;
@@ -261,7 +282,9 @@ void peripheralInit(void)
 
 	// Accelerometer Peripheral Initialization
 	GPIO_Configuration();
+	Button_GPIO_Configuration();
 	SPI_Configuration();
+
 
 	// Delay 3ms so that Accelerometer can startup
 	delay_ms(3);
@@ -306,43 +329,158 @@ int main(void)
 		RNG_ClearFlag(RNG_FLAG_DRDY);
 	}
 
-	// Loop variable
-	volatile int8_t g = 0;
+
 	while(1)
 	{
-
-		int size = sizeof (masterpiece) / sizeof (char);
-		for(g = 0 ; g < size ; g++)
+		// Change between play and pause
+		uint8_t playValue = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7);
+		if ( playValue == 1)
 		{
-			// Set frequency of note
-			setNoteFrequency(masterpiece, g);
 
-			updatePitchAndSpeed(DURATION);
+			if((playing == 0)|| (playing == 4)) //play mode
+			{
 
+				GPIO_SetBits(GPIOD,GPIO_Pin_5);
+				playing = 1; // next time button is pressed set in pause mode
+				playTwinkle();
 
+				//code to stop audio
+			}
+			else if(playing == 1)
+			{
+				GPIO_ResetBits(GPIOD,GPIO_Pin_5);
+				playing = 0;//return to play mode
+			}
+			//debounce
+//			uint32_t smalldelay = 100000;
+//			for(;smalldelay > 0; smalldelay--);
 
-//			if(g == 6 || g == 13 || g == 20 || g == 27 || g == 34)
-//			{
-//				// Update pitch & speed depending on accelerometer orientation
-//				updatePitchAndSpeed(DURATION_DELAY);
-//			}
-//			else if(g == 41)
-//			{
-//				// Update pitch & speed depending on accelerometer orientation
-//				updatePitchAndSpeed(DURATION_END);
-//			}
-//			else
-//			{
-//				updatePitchAndSpeed(DURATION);
-//			}
-
-
-			// Generate note
-			generateNote();
 		}
+
 	}
 
 	return 0;
+
+}
+
+void playTwinkle(void)
+{
+	// Loop variable
+		volatile int8_t g = 0;
+	int size = sizeof (twinkle) / sizeof (char);
+	for(g = 0 ; g < size ; g++)
+	{
+		//if( (mode == 1) && (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1) == 1))//mode changed to usb
+			//break;
+
+
+		// Change mode between USB and algorithm
+	/*---------------------------------------------------------------------------------------------------------------*/
+
+		/*uint8_t modeValue = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
+		if(modeValue == 1)
+		{
+			if((mode == 5) || (mode == 0))
+			{
+				GPIO_SetBits(GPIOD,GPIO_Pin_15);
+				mode=1;
+				//code for karplus synthesis
+			}
+
+			else if(mode == 1)
+			{
+				GPIO_ResetBits(GPIOD,GPIO_Pin_15);
+				mode=0;
+				break;
+				// swicth to USb mode
+			}
+
+
+			//debounce
+			uint32_t smalldelay = 10000;
+			for(;smalldelay > 0; smalldelay--);
+		}*/
+
+	/*----------------------------------------------------------------------------------------------------------------------*/
+
+
+		//using next button
+	/*----------------------------------------------------------------------------------------------------------------------*/
+		uint8_t next = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_10);
+		if(next == 1)
+		{
+			STM_EVAL_LEDOn(ORANGELED);
+			break;
+		}
+		else
+		{
+			STM_EVAL_LEDOff(ORANGELED);
+		}
+
+/*----------------------------------------------------------------------------------------------------------------------*/
+
+
+
+		//play and pause
+/*----------------------------------------------------------------------------------------------------------------------*/
+		if((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==1) && (playing == 1)) // paused
+		{
+			currentNote = g;
+			GPIO_ResetBits(GPIOD,GPIO_Pin_5);
+			playing = 0;
+			break;
+		}
+		/*if((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==1) && (playing == 0)) // play from pause
+		{
+			g= currentNote;
+
+		}
+*/
+
+
+
+		// Set frequency of note
+		setNoteFrequency(twinkle, g);
+
+
+		//enable button
+		uint8_t enabled = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_5);
+
+		//ENABLE ACCELEROMETER IF ENABLE BUTTON IS PRESSED
+		if( enabled == 1)
+		{
+
+			STM_EVAL_LEDOn(GREENLED);
+			updatePitchAndSpeed(DURATION);
+
+
+			if(g == 6 || g == 13 || g == 20 || g == 27 || g == 34)
+			{
+				// Update pitch & speed depending on accelerometer orientation
+				updatePitchAndSpeed(DURATION_DELAY);
+			}
+			else if(g == 41)
+			{
+				// Update pitch & speed depending on accelerometer orientation
+				updatePitchAndSpeed(DURATION_END);
+			}
+			else
+			{
+				updatePitchAndSpeed(DURATION);
+			}
+
+		}
+
+		else
+		{
+			STM_EVAL_LEDOff(GREENLED);
+			//code to disable accelerometer
+		}
+
+		// Generate note
+		generateNote();
+
+	}
 
 }
 
@@ -455,7 +593,7 @@ void generateNote(void)
 void RCC_Configuration(void)
 {
 	// enable clock for GPIOA, GPIOB, GPIOC, GPIOE and DMA2
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC|RCC_AHB1Periph_GPIOA|RCC_AHB1Periph_GPIOE|RCC_AHB1Periph_DMA2, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC|RCC_AHB1Periph_GPIOA|RCC_AHB1Periph_GPIOD|RCC_AHB1Periph_GPIOB|RCC_AHB1Periph_GPIOE|RCC_AHB1Periph_DMA2, ENABLE);
 
 	// enable clock for Random Number Generator
 	RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_RNG, ENABLE);
@@ -492,6 +630,62 @@ void GPIO_Configuration(void)
 
 }
 
+void Button_GPIO_Configuration(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+
+	/* Pins connected to our button input */
+
+	//nextButton input pin
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+	//PlayButton input pin
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+	//modeButton input pin
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+
+	GPIO_Init(GPIOE, &GPIO_InitStructure);
+
+	//enableButton input pin
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+
+	GPIO_Init(GPIOE, &GPIO_InitStructure);
+
+
+	//Pins to send output to external circuit
+
+	//Output for play button LED - flash @1hz
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+
+	GPIO_Init(GPIOD, &GPIO_InitStructure);
+
+	//output for mode button LED
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+
+	GPIO_Init(GPIOD, &GPIO_InitStructure);
+}
+
 void SPI_Configuration(void)
 {
 
@@ -512,6 +706,69 @@ void SPI_Configuration(void)
 	SPI_Cmd(SPI1, ENABLE);
 }
 
+//void PE1_Configuration(void)
+//{
+//    /* Set variables used */
+//    GPIO_InitTypeDef GPIO_InitStruct;
+//    EXTI_InitTypeDef EXTI_InitStruct;
+//    NVIC_InitTypeDef NVIC_InitStruct;
+//
+//    /* Set pin as input */
+//    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
+//    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+//    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_1;
+//    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_DOWN;
+//    GPIO_Init(GPIOE, &GPIO_InitStruct);
+//
+//    /* Tell system that you will use PE4 for EXTI_Line4 */
+//    SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOE, EXTI_PinSource1);
+//
+//    /* PE4 is connected to EXTI_Line4 */
+//    EXTI_InitStruct.EXTI_Line = EXTI_Line1;
+//    /* Enable interrupt */
+//    EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+//    /* Interrupt mode */
+//    EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
+//    /* Triggers on rising and falling edge */
+//    EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;
+//    /* Add to EXTI */
+//    EXTI_Init(&EXTI_InitStruct);
+//
+//    /* Add IRQ vector to NVIC */
+//    /* PE4 is connected to EXTI_Line4, which has EXTI4_IRQn vector */
+//    NVIC_InitStruct.NVIC_IRQChannel = EXTI1_IRQn;
+//    /* Set priority */
+//    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x00;
+//    /* Set sub priority */
+//    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x00;
+//    /* Enable interrupt */
+//    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+//    /* Add to NVIC */
+//    NVIC_Init(&NVIC_InitStruct);
+//}
+//
+//void EXTI1_IRQHandler(void)
+//{
+//    /* Make sure that interrupt flag is set */
+//    if (EXTI_GetITStatus(EXTI_Line1) != RESET)
+//    {
+//    	if((mode == 5) || (mode == 0))
+//		{
+//			GPIO_SetBits(GPIOD,GPIO_Pin_15);
+//			mode=1;
+//			//code for karplus synthesis
+//		}
+//
+//
+//
+//		else if(mode == 1)
+//		{
+//			GPIO_ResetBits(GPIOD,GPIO_Pin_15);
+//			mode=0;
+//			// swicth to USb mode
+//		}
+//    }
+//}
 int32_t writeAccelByte(uint8_t regAdr, uint8_t data)
 {
 	uint8_t dummyVar;
