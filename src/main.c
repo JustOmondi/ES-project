@@ -44,7 +44,8 @@ void generateNote(void);
 void peripheralInit(void);
 void playTwinkle(void);
 void playLittleLamb(void);
-void playLetItGo(void);
+void playJingleBells(void);
+void playHappyBirthday(void);
 void EXTI1_IRQHandler(void);
 
 //Melody methods
@@ -73,8 +74,8 @@ __IO uint32_t duration = 44100;	//  duration of note
 // Melody arrays
 __IO char twinkle[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
 __IO char littleLamb[26] = {'E','D', 'C','D', 'E','E','E','D','D','D','E','G','G','E','D','C','D','E','E','E','E','D','D','E','D','C'};
-__IO char letItGo[96] = {'G','F','G','D','D','G','G','E','E','E','E','F','G','G','F','G','D','D','G','G','A','B','C','B','A','G','G','B','B','B','B','B','B','A','G','G','G','A','A','G','G','A','G','B','B','B','D','E','D','A','G', 'A','A','A','G','A','B','B','D','E','D','B','D','D','D','C','B','C','B','B','A','B','A','G','A','A','B','C','B','G','F','G','D','D','G','G','C','C','C','C','B','B','C','B','G'};
-
+__IO char jingleBells[51] = {'E','E','E','E','E','E','E','G','C','D','E','F','F','F','F','F','E','E','E','E','E','D','D','E','D','G','E','E','E','E','E','E','E','G','C','D','E','F','F','F','F','F','E','E','E','E','G','G','F','D','C'};
+__IO char happyBirthday[51];
 
 __IO int32_t temp = 0;
 __IO int32_t temp1 = 0;
@@ -609,12 +610,12 @@ void playTwinkle(void)
 
 }
 
-void playLetItGo(void)
+void playJingleBells(void)
 {
 	// Loop variable
 	volatile int8_t g = 0;
 
-	int size = sizeof (littleLamb) / sizeof (char);
+	int size = sizeof (jingleBells) / sizeof (char);
 	for(g = 0 ; g < size ; g++)
 	{
 		//if( (mode == 1) && (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1) == 1)) // Mode changed to usb
@@ -686,7 +687,7 @@ void playLetItGo(void)
 
 
 		// Set frequency of note
-		setNoteFrequency(littleLamb, g);
+		setNoteFrequency(jingleBells, g);
 
 
 		//enable button
