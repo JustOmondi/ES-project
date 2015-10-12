@@ -51,7 +51,7 @@ void playHappyBirthday(void);
 void playNokiaTune(void);
 
 
-void EXTI1_IRQHandler(void);
+//void EXTI1_IRQHandler(void);
 
 
 // Status variables
@@ -64,14 +64,13 @@ uint8_t currentNote;
 
 
 
-/* Private Global Variables */
 __IO uint8_t outBuffer[OUTBUFFERSIZE];	// stores synthesized note waveform
 
 __IO float octave = 3;
-__IO float noteFreq = 20.6;				// default note frequency
-__IO float amplitude = 5.0;		// volume
+__IO float noteFreq = 20.6;			// Default note frequency
+__IO float amplitude = 5.0;			// Volume
 __IO float volume = 0.5;
-__IO uint32_t duration = 44100;	//  duration of note
+__IO uint32_t duration = 44100;		// Duration of note
 
 // Melody arrays
 __IO char twinkle[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
@@ -93,7 +92,6 @@ volatile uint8_t DACBuffer[DACBUFFERSIZE];		// buffer used for synthesis algorit
 volatile uint8_t tempBuffer[DACBUFFERSIZE];
 volatile uint8_t noiseBuffer[DACBUFFERSIZE];
 uint16_t DACBufferSize;
-
 
 
 void peripheralInit(void)
@@ -224,8 +222,8 @@ void setNoteFrequency(char notes[], uint8_t i)
 	{
 		noteFreq = 21.83;
 	}
-
 }
+
  void updatePitchAndSpeed(uint16_t amount)
  {
 	checkAcc();
@@ -341,34 +339,11 @@ void checkAcc(void)
 	accZ = (18/1000.0) * 9.81 * temp;
 
 
-	/* Calculate Attitude */
-	pitch = atan2(accY,accZ); //octave
+	// Calculate angles
+	pitch = atan2(accY,accZ); // Changes the pitch of the synthesized audio
 	pitch = pitch*((180/M_PI));
-	roll = atan2(-accX,(sqrt((accY*accY) + (accZ*accZ)))); //speed
+	roll = atan2(-accX,(sqrt((accY*accY) + (accZ*accZ)))); // Changes the speed of the synthesized audio
 	roll = roll*((float)(180/M_PI));
-
-
-	/* Do the LED pitch thing */
-//	if(pitch < 0)
-//	{
-//		STM_EVAL_LEDOn(LED6);
-//		STM_EVAL_LEDOff(LED3);
-//	}
-//	else
-//	{
-//		STM_EVAL_LEDOff(LED6);
-//		STM_EVAL_LEDOn(LED3);
-//	}
-//	if(roll < 0)
-//	{
-//		STM_EVAL_LEDOn(LED4);
-//		STM_EVAL_LEDOff(LED5);
-//	}
-//	else
-//	{
-//		STM_EVAL_LEDOff(LED4);
-//		STM_EVAL_LEDOn(LED5);
-//	}
 }
 
 void playLittleLamb(void)
@@ -378,38 +353,7 @@ void playLittleLamb(void)
 	int size = sizeof (littleLamb) / sizeof (char);
 	for(g = 0 ; g < size ; g++)
 	{
-		//if( (mode == 1) && (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1) == 1)) // Mode changed to usb
-			//break;
-
-
-		// Change mode between USB and algorithm
-	/*---------------------------------------------------------------------------------------------------------------*/
-
-		/*uint8_t modeValue = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
-		if(modeValue == 1)
-		{
-			if((mode == 5) || (mode == 0))
-			{
-				GPIO_SetBits(GPIOD,GPIO_Pin_15);
-				mode=1;
-				//code for karplus synthesis
-			}
-
-			else if(mode == 1)
-			{
-				GPIO_ResetBits(GPIOD,GPIO_Pin_15);
-				mode=0;
-				break;
-				// swicth to USb mode
-			}
-
-
-			//debounce
-			uint32_t smalldelay = 10000;
-			for(;smalldelay > 0; smalldelay--);
-		}*/
-
-	/*----------------------------------------------------------------------------------------------------------------------*/
+		// Change of mode between synthesis and USB mode meant to be implemented at this point. See comments at bottom of this file
 
 
 		//using next button
@@ -499,38 +443,7 @@ void playTwinkle(void)
 	int size = sizeof (twinkle) / sizeof (char);
 	for(g = 0 ; g < size ; g++)
 	{
-		//if( (mode == 1) && (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1) == 1)) // Mode changed to usb
-			//break;
-
-
-		// Change mode between USB and algorithm
-	/*---------------------------------------------------------------------------------------------------------------*/
-
-		/*uint8_t modeValue = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
-		if(modeValue == 1)
-		{
-			if((mode == 5) || (mode == 0))
-			{
-				GPIO_SetBits(GPIOD,GPIO_Pin_15);
-				mode=1;
-				//code for karplus synthesis
-			}
-
-			else if(mode == 1)
-			{
-				GPIO_ResetBits(GPIOD,GPIO_Pin_15);
-				mode=0;
-				break;
-				// swicth to USb mode
-			}
-
-
-			//debounce
-			uint32_t smalldelay = 10000;
-			for(;smalldelay > 0; smalldelay--);
-		}*/
-
-	/*----------------------------------------------------------------------------------------------------------------------*/
+		// Change of mode between synthesis and USB mode meant to be implemented at this point. See comments at bottom of this file
 
 
 		//using next button
@@ -622,38 +535,7 @@ void playNokiaTune(void)
 	int size = sizeof (nokiaTune) / sizeof (char);
 	for(g = 0 ; g < size ; g++)
 	{
-		//if( (mode == 1) && (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1) == 1)) // Mode changed to usb
-			//break;
-
-
-		// Change mode between USB and algorithm
-	/*---------------------------------------------------------------------------------------------------------------*/
-
-		/*uint8_t modeValue = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
-		if(modeValue == 1)
-		{
-			if((mode == 5) || (mode == 0))
-			{
-				GPIO_SetBits(GPIOD,GPIO_Pin_15);
-				mode=1;
-				//code for karplus synthesis
-			}
-
-			else if(mode == 1)
-			{
-				GPIO_ResetBits(GPIOD,GPIO_Pin_15);
-				mode=0;
-				break;
-				// swicth to USb mode
-			}
-
-
-			//debounce
-			uint32_t smalldelay = 10000;
-			for(;smalldelay > 0; smalldelay--);
-		}*/
-
-	/*----------------------------------------------------------------------------------------------------------------------*/
+		// Change of mode between synthesis and USB mode meant to be implemented at this point. See comments at bottom of this file
 
 
 		//using next button
@@ -743,38 +625,7 @@ void playJingleBells(void)
 	int size = sizeof (jingleBells) / sizeof (char);
 	for(g = 0 ; g < size ; g++)
 	{
-		//if( (mode == 1) && (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1) == 1)) // Mode changed to usb
-			//break;
-
-
-		// Change mode between USB and algorithm
-	/*---------------------------------------------------------------------------------------------------------------*/
-
-		/*uint8_t modeValue = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
-		if(modeValue == 1)
-		{
-			if((mode == 5) || (mode == 0))
-			{
-				GPIO_SetBits(GPIOD,GPIO_Pin_15);
-				mode=1;
-				//code for karplus synthesis
-			}
-
-			else if(mode == 1)
-			{
-				GPIO_ResetBits(GPIOD,GPIO_Pin_15);
-				mode=0;
-				break;
-				// swicth to USb mode
-			}
-
-
-			//debounce
-			uint32_t smalldelay = 10000;
-			for(;smalldelay > 0; smalldelay--);
-		}*/
-
-	/*----------------------------------------------------------------------------------------------------------------------*/
+		// Change of mode between synthesis and USB mode meant to be implemented at this point. See comments at bottom of this file
 
 
 		//using next button
@@ -862,39 +713,7 @@ void playHappyBirthday(void)
 	int size = sizeof (happyBirthday) / sizeof (char);
 	for(g = 0 ; g < size ; g++)
 	{
-		//if( (mode == 1) && (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1) == 1)) // Mode changed to usb
-			//break;
-
-
-		// Change mode between USB and algorithm
-	/*---------------------------------------------------------------------------------------------------------------*/
-
-		/*uint8_t modeValue = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
-		if(modeValue == 1)
-		{
-			if((mode == 5) || (mode == 0))
-			{
-				GPIO_SetBits(GPIOD,GPIO_Pin_15);
-				mode=1;
-				//code for karplus synthesis
-			}
-
-			else if(mode == 1)
-			{
-				GPIO_ResetBits(GPIOD,GPIO_Pin_15);
-				mode=0;
-				break;
-				// swicth to USb mode
-			}
-
-
-			//debounce
-			uint32_t smalldelay = 10000;
-			for(;smalldelay > 0; smalldelay--);
-		}*/
-
-	/*----------------------------------------------------------------------------------------------------------------------*/
-
+		// Change of mode between synthesis and USB mode meant to be implemented at this point. See comments at bottom of this file
 
 		//using next button
 	/*----------------------------------------------------------------------------------------------------------------------*/
@@ -1325,3 +1144,43 @@ uint16_t EVAL_AUDIO_GetSampleCallBack(void){
   /* TODO, implement your code here */
   return -1;
 }
+
+
+/*
+  Code for mode change to be implemented at specified locations in the melody functions
+  ----------------------------------------------------------------------------------------
+
+ // Mode changed to USB
+
+	if( (mode == 1) && (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1) == 1))
+	{
+		// Change mode between USB and algorithm
+
+		/*uint8_t modeValue = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
+
+		if(modeValue == 1)
+		{
+			if((mode == 5) || (mode == 0))
+			{
+				GPIO_SetBits(GPIOD,GPIO_Pin_15);
+				mode=1;
+				//code for karplus synthesis
+			}
+
+			else if(mode == 1)
+			{
+				GPIO_ResetBits(GPIOD,GPIO_Pin_15);
+				mode=0;
+				break;
+				// swicth to USb mode
+			}
+
+
+			// Debouncing
+
+			uint32_t smalldelay = 10000;
+			for(;smalldelay > 0; smalldelay--);
+		}
+
+----------------------------------------------------------------------------------------------------------------------
+*/
