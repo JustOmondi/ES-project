@@ -349,7 +349,7 @@ void checkAcc(void)
 void playLittleLamb(void)
 {
 	// Loop variable
-	volatile int8_t g = 0;
+	int8_t g = 0;
 	int size = sizeof (littleLamb) / sizeof (char);
 	for(g = 0 ; g < size ; g++)
 	{
@@ -388,12 +388,8 @@ void playLittleLamb(void)
 
 		}
 */
-
-
-
 		// Set frequency of note
 		setNoteFrequency(littleLamb, g);
-
 
 		//enable button
 		uint8_t enabled = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_5);
@@ -401,10 +397,8 @@ void playLittleLamb(void)
 		//ENABLE ACCELEROMETER IF ENABLE BUTTON IS PRESSED
 		if( enabled == 1)
 		{
-
 			STM_EVAL_LEDOn(GREENLED);
 			updatePitchAndSpeed(DURATION);
-
 
 			if(g >= 4 && g <= 12)
 			{
@@ -431,7 +425,6 @@ void playLittleLamb(void)
 
 		// Generate note
 		generateNote();
-
 	}
 
 }
@@ -439,7 +432,7 @@ void playLittleLamb(void)
 void playTwinkle(void)
 {
 	// Loop variable
-		volatile int8_t g = 0;
+	int8_t g = 0;
 	int size = sizeof (twinkle) / sizeof (char);
 	for(g = 0 ; g < size ; g++)
 	{
