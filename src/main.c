@@ -47,7 +47,7 @@ void playLittleLamb(void);
 
 
 // Status variables
-uint8_t playing = 4; 	// 0 - Paused, 1 - playing -
+uint8_t playing = 0; 	// 0 - Paused, 1 - playing
 uint8_t enabled = 0;	// 0 - enabled 1 - disabled - Used to enable manipulation of sound by the accelerometer
 __IO uint8_t mode = 5; 	// 0 - Algorithm mode, 1 - USB mode
 uint8_t currentNote;	// Used to track position of melody when paused
@@ -148,32 +148,27 @@ int main(void)
 		if ( playValue == 1) // Change between play and pause
 		{
 
-			if((playing == 0)|| (playing == 4)) //play mode
+			if((playing == 0)) //play mode
 			{
-
 				GPIO_SetBits(GPIOD,GPIO_Pin_5); 	// Light up play LED
-				playing = 1; 	// Toggle play/pause state
-				playTwinkle();
 
-				//code to stop audio
+				playing = 1; 	// Toggle play/pause status
+				playTwinkle();	// Start playing melody
 			}
+
 			else if(playing == 1)
 			{
 				GPIO_ResetBits(GPIOD,GPIO_Pin_5);
 				playing = 0;//return to play mode
 			}
-			//debounce
-//			uint32_t smalldelay = 100000;
-//			for(;smalldelay > 0; smalldelay--);
-
 		}
 
 	}
-
 	return 0;
 
 }
 
+// Set frequency of single note based on symbol in the melody array i.e. either C,F,G etc
 void setNoteFrequency(char notes[], uint8_t i)
 {
 	if(notes[i] == 'G')
@@ -202,6 +197,7 @@ void setNoteFrequency(char notes[], uint8_t i)
 	}
 }
 
+// Update pitch and speed of audio playing based on accelerometer orientation
  void updatePitchAndSpeed(uint16_t amount)
  {
 	checkAcc();
@@ -302,6 +298,7 @@ void setNoteFrequency(char notes[], uint8_t i)
 	}
  }
 
+ // Get accelerometer orientation data
 void checkAcc(void)
 {
 	/* Read X Acceleration */
@@ -324,55 +321,49 @@ void checkAcc(void)
 	roll = roll*((float)(180/M_PI));
 }
 
+// Play 'Mary Had a Little Lamb' melody
 void playLittleLamb(void)
 {
 	// Loop variable
 	int8_t g = 0;
+
 	int size = sizeof (littleLamb) / sizeof (char);
 	for(g = 0 ; g < size ; g++)
 	{
 		// Change of mode between synthesis and USB mode meant to be implemented at this point. See comments at bottom of this file
 
-
-		//using next button
-	/*----------------------------------------------------------------------------------------------------------------------*/
+		// Check next button input pin
 		uint8_t next = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_10);
-		if(next == 1)
+
+		if(next == 1) // Skip to next melody
 		{
 			STM_EVAL_LEDOn(ORANGELED);
-			break;
-		}
-		else
-		{
-			STM_EVAL_LEDOff(ORANGELED);
+
+			// Break out of loop
+			g = size+1;
 		}
 
-/*----------------------------------------------------------------------------------------------------------------------*/
+		// Check play/pause button input
+		uint8_t isPlaying = GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_0);
 
-
-
-		//play and pause
-/*----------------------------------------------------------------------------------------------------------------------*/
-		if((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==1) && (playing == 1)) // paused
+		if((isPlaying == 1) && (playing == 1)) // Pause
 		{
-			currentNote = g;
-			GPIO_ResetBits(GPIOD,GPIO_Pin_5);
+			currentNote = g;					// Store current note
+			GPIO_ResetBits(GPIOD,GPIO_Pin_5);	// Turn off play/pause LED
 			playing = 0;
 			break;
 		}
-		/*if((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==1) && (playing == 0)) // play from pause
+		else if((isPlaying == 1) && (playing == 0)) // Play
 		{
-			g= currentNote;
-
+			g = currentNote; // Resume
 		}
-*/
+
 		// Set frequency of note
 		setNoteFrequency(littleLamb, g);
 
-		//enable button
+		// Check enable button input
 		uint8_t enabled = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_5);
 
-		//ENABLE ACCELEROMETER IF ENABLE BUTTON IS PRESSED
 		if( enabled == 1)
 		{
 			STM_EVAL_LEDOn(GREENLED);
