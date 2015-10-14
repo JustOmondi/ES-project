@@ -8,93 +8,75 @@
 #include "stm32f4xx_it.h"
 #include <math.h>
 
-#define DELAY 60
 #define CTRL_REG1 0x20
 #define OUTX 0xA9
 #define OUTY 0xAB
 #define OUTZ 0xAD
-
 
 #define GREENLED LED4
 #define ORANGELED LED3
 #define BLUELED LED6
 #define REDLED LED5
 
-#define SAMPLE_RATE 44100
-#define DECAY_FACTOR 0.996
-#define DURATION 24100
-#define DURATION_DELAY 55100
-#define DURATION_END 55100
-/* Private Macros */
-#define OUTBUFFERSIZE 44100
-#define DACBUFFERSIZE 1200
+#define DECAY_FACTOR 0.9996		// Factor by which averaged values will be multiplied for the fading effect of a note
+#define DURATION 24100			// Duration for a note that is neither long nor short
+#define DURATION_DELAY 55100 	// Duration for a long note
+#define DURATION_END 55100		// Duration for a note that ends a melody
+#define OUTBUFFERSIZE 44100		// Size of buffer to hold the note waveform
+#define DACBUFFERSIZE 1200		// Default size of buffer to be used to synthesize a single note
 
-//Function prototypes
+// Configuration function prototypes
 void RCC_Configuration(void);
 void RNG_Configuration(void);
 void GPIO_Configuration(void);
 void Button_GPIO_Configuration(void);
 void SPI_Configuration(void);
+void peripheralsInit(void);
+
+// Control function prototypes
 void delay_ms(uint32_t milli);
 int32_t writeAccelByte(uint8_t regAdr, uint8_t data);
 void checkAcc(void);
 void updatePitchAndSpeed(uint16_t amount);
 void setNoteFrequency(char notes[], uint8_t i);
 void generateNote(void);
-void peripheralInit(void);
 
 //Melody function prototypes
 void playTwinkle(void);
 void playLittleLamb(void);
-void playJingleBells(void);
-void playHappyBirthday(void);
-void playNokiaTune(void);
-
-
-//void EXTI1_IRQHandler(void);
 
 
 // Status variables
-uint8_t playing = 4; // 0 - Paused, 1 - playing
-uint8_t enabled = 0;
-__IO uint8_t mode = 5; // 0 - Algorithm mode, 1 - USb mode
-uint8_t currentSong = 1;
-uint8_t currentNote;
+uint8_t playing = 4; 	// 0 - Paused, 1 - playing -
+uint8_t enabled = 0;	// 0 - enabled 1 - disabled - Used to enable manipulation of sound by the accelerometer
+__IO uint8_t mode = 5; 	// 0 - Algorithm mode, 1 - USB mode
+uint8_t currentNote;	// Used to track position of melody when paused
 
+__IO uint8_t outBuffer[OUTBUFFERSIZE];	// Buffer that stores synthesized note waveform
 
-
-
-__IO uint8_t outBuffer[OUTBUFFERSIZE];	// stores synthesized note waveform
-
-__IO float octave = 3;
+__IO float octave = 3;				// default note pitch variable
 __IO float noteFreq = 20.6;			// Default note frequency
-__IO float amplitude = 5.0;			// Volume
-__IO float volume = 0.5;
-__IO uint32_t duration = 44100;		// Duration of note
+__IO float amplitude = 5.0;			// Determines how loud the sound is
+__IO uint32_t duration = 44100;		// Global note duration variable
 
 // Melody arrays
 __IO char twinkle[42] = {'C','C','G','G','A','A','G','F','F','E','E','D','D','C','G','G','F','F','E','E','D','G','G','F','F','E','E','D','C','C','G','G','A','A','G','F','F','E','E','D','D','C'};
 __IO char littleLamb[26] = {'E','D', 'C','D', 'E','E','E','D','D','D','E','G','G','E','D','C','D','E','E','E','E','D','D','E','D','C'};
-__IO char jingleBells[51] = {'E','E','E','E','E','E','E','G','C','D','E','F','F','F','F','F','E','E','E','E','E','D','D','E','D','G','E','E','E','E','E','E' ,'E','G','C','D','E','F','F','F','F','F','E','E','E','E','G','G','F','D','C'};
-__IO char happyBirthday[25] = {'G','G','A','G','C','B','G','G','A','G','D','C','G','G','G','E','C','B','A','F','F','E','C','D','C'};
-__IO char nokiaTune[13] = {'E','D','F','G','C','B','D','E','B','A','C','E','A'};
 
-
-__IO int32_t temp = 0;
-__IO int32_t temp1 = 0;
-__IO int32_t temp2 = 0;
+// Accelerometer variables
+__IO int32_t accTemp = 0;
 __IO float accX, accY, accZ = 0;
- float roll, pitch = 0;
+ __IO float roll, pitch = 0;
 
 volatile uint32_t sampleCounter = 0;
 volatile int16_t sample = 0;
-volatile uint8_t DACBuffer[DACBUFFERSIZE];		// buffer used for synthesis algorithm; length determines note frequency and octave
-volatile uint8_t tempBuffer[DACBUFFERSIZE];
-volatile uint8_t noiseBuffer[DACBUFFERSIZE];
+volatile uint8_t DACBuffer[DACBUFFERSIZE];		// Buffer used for synthesis
+volatile uint8_t tempBuffer[DACBUFFERSIZE];		// Buffer used for synthesis
+volatile uint8_t noiseBuffer[DACBUFFERSIZE];	// Buffer to store random numbers to refill DACBuffer for the synthesis of each note
 uint16_t DACBufferSize;
 
 
-void peripheralInit(void)
+void peripheralsInit(void)
 {
 	// Initialize LEDs
 	STM_EVAL_LEDInit(LED3);
@@ -128,15 +110,10 @@ void peripheralInit(void)
 
 int main(void)
 {
+	// Initialize micro-controller to a default state
 	SystemInit();
 
-	peripheralInit();
-
-	//uint16_t dacBuffer[SIZE] = {678, 807, 539, 215, 967, 308, 984, 589, 957, 952, 816, 581, 185, 501, 511, 492, 679, 140, 716, 174, 558, 30, 494, 642, 54, 913, 712, 14, 314, 917, 1, 381, 753, 79, 302, 554, 557, 272, 27, 416, 733, 380, 613, 717, 520, 57, 629, 80, 165, 521, 126, 100, 764, 687, 262, 388, 173, 896, 980, 261, 33, 826, 314, 529, 743, 126, 633, 173, 892, 67, 904, 807, 244, 689, 521, 105, 537, 397, 487, 42, 698, 803, 240, 172, 887, 589, 286, 555, 261, 419, 558, 332, 820, 896, 860, 512, 184, 300, 404, 247, 293, 438, 500, 410, 315, 182, 885, 374, 344, 996, 0, 810, 166, 258, 595, 603, 951, 618, 551, 414, 767, 461, 844, 766, 710, 243, 713, 449, 929, 47, 667, 372, 459, 557, 874, 548, 337, 78, 718, 350, 659, 535, 169, 67, 575, 451, 529, 550, 773, 856, 980, 8, 291, 372, 500, 191, 732, 588, 623, 480, 864, 686, 102, 870, 723, 191, 257, 161, 202, 363, 990, 489, 639, 148, 497, 768, 460, 371, 983, 83, 509, 870, 143, 272, 339, 85, 780, 916, 717, 652, 89, 955, 109, 895, 718, 429, 535, 294, 239, 399, 46, 918, 661, 299, 564, 969, 522, 464, 848, 3, 772, 0, 444, 350, 763, 358, 803, 620, 787, 544, 363, 454, 549, 406, 451, 856, 274, 705, 31, 346, 851, 132, 584, 932, 532, 260, 542, 310, 383, 447, 765, 635, 537, 937, 399, 903, 746, 727, 366, 467, 940, 542, 255, 572, 878, 97, 538, 843, 817, 284, 92, 89, 511, 91, 655, 425, 415, 876, 768, 753, 171, 407, 765, 708, 677, 528, 662, 701, 938, 65, 810, 970, 560, 305, 666, 640, 295, 740, 706, 659, 652, 321, 387, 555, 70, 722, 923, 780, 726, 249, 619, 475, 286, 926, 783, 449, 394, 678, 267, 699, 644, 260, 137, 622, 538, 469, 408, 559, 963, 399, 933, 312, 27, 996, 728, 0, 983, 878, 898, 486, 579, 28, 620, 517, 148, 232, 669, 710, 272, 561, 740, 269, 658, 524, 64, 111, 616, 113, 300, 720, 131, 313, 732, 179, 629, 682, 443, 525, 11, 44, 942, 29, 317, 423, 135, 974, 129, 714, 386, 657, 521, 893, 676, 876, 330, 768, 972, 832, 541, 413, 857, 865, 343, 413, 400, 808, 200, 118, 147, 528, 719, 576, 283, 588, 619, 845, 76, 734, 904, 751, 164, 236, 461, 35, 75, 325, 411, 422, 429, 76, 432, 200, 698, 27, 285, 397, 416, 450, 558, 969, 720, 520, 677, 437, 340, 228, 41, 542, 422, 925, 140, 93, 432, 366, 628, 48, 724, 657, 190, 990, 259, 916, 797, 739, 294, 402, 576, 590, 860, 744, 859, 242, 119, 285, 37, 907, 875, 647, 605, 735, 192, 750, 911, 24, 188, 956, 981, 100, 675, 395, 123, 336, 329, 846, 385, 594, 589, 272, 218, 26, 996, 931, 741, 542, 101, 438, 975, 846, 185, 147, 660, 869, 654, 573, 730, 507, 292, 540, 928, 446};
-	//float dacBuffer[SIZE];
-
-	//-------------------------------------------------------------
-
+	peripheralsInit();
 
 	// Calculation of buffer length corresponding to note that needs to be played (using default values here)
 	// duration/(note frequency x 2^octave) if odd, add 1
@@ -144,12 +121,12 @@ int main(void)
 	if(DACBufferSize & 0x00000001)
 		DACBufferSize +=1;
 
-
+	// Loop variables
 	int16_t i;
-
 	uint16_t n, m;
+
+	// Random numbers variable
 	uint32_t random = 0;
-	uint8_t b = 0;
 
 	// Fill buffer with random values
 	for (n = 0; n<DACBUFFERSIZE; n++)
@@ -165,16 +142,17 @@ int main(void)
 
 	while(1)
 	{
-		// Change between play and pause
+		// Read play button input pin
 		uint8_t playValue = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7);
-		if ( playValue == 1)
+
+		if ( playValue == 1) // Change between play and pause
 		{
 
 			if((playing == 0)|| (playing == 4)) //play mode
 			{
 
-				GPIO_SetBits(GPIOD,GPIO_Pin_5);
-				playing = 1; // next time button is pressed set in pause mode
+				GPIO_SetBits(GPIOD,GPIO_Pin_5); 	// Light up play LED
+				playing = 1; 	// Toggle play/pause state
 				playTwinkle();
 
 				//code to stop audio
