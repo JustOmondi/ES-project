@@ -8,6 +8,7 @@
 #include "stm32f4xx_it.h"
 #include <math.h>
 
+// Accelerometer configuration constants
 #define CTRL_REG1 0x20
 #define OUTX 0xA9
 #define OUTY 0xAB
@@ -25,7 +26,7 @@
 #define OUTBUFFERSIZE 44100		// Size of buffer to hold the note waveform
 #define DACBUFFERSIZE 1200		// Default size of buffer to be used to synthesize a single note
 
-// Configuration function prototypes
+// Overall configuration function prototypes
 void RCC_Configuration(void);
 void RNG_Configuration(void);
 void GPIO_Configuration(void);
@@ -680,6 +681,7 @@ void SPI_Configuration(void)
 	SPI_Cmd(SPI1, ENABLE);
 }
 
+// Read accelerometer data from its SPI peripheral
 int32_t writeAccelByte(uint8_t regAdr, uint8_t data)
 {
 	uint8_t dummyVar;
@@ -765,7 +767,8 @@ uint16_t EVAL_AUDIO_GetSampleCallBack(void){
 			{
 				GPIO_SetBits(GPIOD,GPIO_Pin_15);
 				mode=1;
-				//code for karplus synthesis
+
+				// Switch to synthesis mode
 			}
 
 			else if(mode == 1)
@@ -773,14 +776,10 @@ uint16_t EVAL_AUDIO_GetSampleCallBack(void){
 				GPIO_ResetBits(GPIOD,GPIO_Pin_15);
 				mode=0;
 				break;
-				// swicth to USb mode
+
+				// Switch to USB mode
 			}
 
-
-			// Debouncing
-
-			uint32_t smalldelay = 10000;
-			for(;smalldelay > 0; smalldelay--);
 		}
 
 ----------------------------------------------------------------------------------------------------------------------
